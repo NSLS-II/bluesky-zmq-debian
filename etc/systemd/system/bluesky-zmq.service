@@ -1,0 +1,11 @@
+# meant for deployment to systemd
+[Unit]
+Description=Bluesky ZMQ server
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/bluesky-0MQ-proxy-systemd 5577 5578
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
