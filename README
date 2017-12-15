@@ -1,1 +1,4 @@
 http://www.king-foo.com/2011/11/creating-debianubuntu-deb-packages/
+
+build with :  dpkg-deb --build bluesky-zmq
+install with sudo dkpg -i bluesky-zmq.deb
