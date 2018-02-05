@@ -1,8 +1,8 @@
-pip install bluesky zmq systemd
+pip3 install bluesky zmq systemd matplotlib
 # reload
 systemctl daemon-reload
 # enable the service
 systemctl enable bluesky-zmq.service
 systemctl start bluesky-zmq.service
 # to stop:
-systemctl stop bluesky-zmq.service
+#systemctl stop bluesky-zmq.service
