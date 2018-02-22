@@ -13,6 +13,116 @@ log = logging.getLogger('bluesky 0mq')
 log.addHandler(JournaldLogHandler())
 log.setLevel(logging.INFO)
 
+############## This piece is a copy from bluesky.callbacks.zmq
+############## (Thanks to Daniel B. Allan)
+class Proxy:
+    """
+    Start a 0MQ proxy on the local host.
+
+    Parameters
+    ----------
+    in_port : int, optional
+        Port that RunEngines should broadcast to. If None, a random port is
+        used.
+    out_port : int, optional
+        Port that subscribers should subscribe to. If None, a random port is
+        used.
+    zmq : object, optional
+        By default, the 'zmq' module is imported and used. Anything else
+        mocking its interface is accepted.
+
+    Attributes
+    ----------
+    in_port : int
+        Port that RunEngines should broadcast to.
+    out_port : int
+        Port that subscribers should subscribe to.
+    closed : boolean
+        True if the Proxy has already been started and subsequently
+        interrupted and is therefore unusable.
+
+    Examples
+    --------
+
+    Run on specific ports.
+
+    >>> proxy = Proxy(5567, 5568)
+    >>> proxy
+    Proxy(in_port=5567, out_port=5568)
+    >>> proxy.start()  # runs until interrupted
+
+    Run on random ports, and access those ports before starting.
+
+    >>> proxy = Proxy()
+    >>> proxy
+    Proxy(in_port=56504, out_port=56505)
+    >>> proxy.in_port
+    56504
+    >>> proxy.out_port
+    56505
+    >>> proxy.start()  # runs until interrupted
+    """
+    def __init__(self, in_port=None, out_port=None, *, zmq=None):
+        if zmq is None:
+            import zmq
+        self.zmq = zmq
+        self.closed = False
+        try:
+            context = zmq.Context(1)
+            # Socket facing clients
+            frontend = context.socket(zmq.SUB)
+            if in_port is None:
+                in_port = frontend.bind_to_random_port("tcp://*")
+            else:
+                frontend.bind("tcp://*:%d" % in_port)
+
+            frontend.setsockopt_string(zmq.SUBSCRIBE, "")
+
+            # Socket facing services
+            backend = context.socket(zmq.PUB)
+            if out_port is None:
+                out_port = backend.bind_to_random_port("tcp://*")
+            else:
+                backend.bind("tcp://*:%d" % out_port)
+        except:
+            # Clean up whichever components we have defined so far.
+            try:
+                frontend.close()
+            except NameError:
+                ...
+            try:
+                backend.close()
+            except NameError:
+                ...
+            context.term()
+            raise
+        else:
+            self.in_port = in_port
+            self.out_port = out_port
+            self._frontend = frontend
+            self._backend = backend
+            self._context = context
+
+    def start(self):
+        if self.closed:
+            raise RuntimeError("This Proxy has already been started and "
+                               "interrupted. Create a fresh instance with "
+                               "{}".format(repr(self)))
+        try:
+            self.zmq.device(self.zmq.FORWARDER, self._frontend, self._backend)
+        finally:
+            self.closed = True
+            self._frontend.close()
+            self._backend.close()
+            self._context.term()
+
+    def __repr__(self):
+        return ("{}(in_port={in_port}, out_port={out_port})"
+                "".format(type(self).__name__, **vars(self)))
+
+
+###################
+
 
 if __name__ == "__main__":
     DESC = "Start a 0MQ proxy for publishing bluesky documents over a network."
@@ -26,7 +136,6 @@ if __name__ == "__main__":
     out_port = args.out_port[0]
 
     log.info("Loading...")
-    from bluesky.callbacks.zmq import Proxy  # this takes a couple seconds
     log.info("Connecting...")
     proxy = Proxy(in_port, out_port)
     log.info("Receiving on port %d; publishing to port %d." % (in_port, out_port))
