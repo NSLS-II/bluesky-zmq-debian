@@ -1,4 +1,4 @@
-pip3 install zmq systemd
+pip3 install zmq
 # reload
 systemctl daemon-reload
 # enable the service
