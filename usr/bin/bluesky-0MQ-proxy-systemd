@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # this version has systemd logging in place. Only meant to use
 # with systemd as a service
-# matplotlib fix, disable any other plotting
-# (unfortunate databroker dependence...)
-import matplotlib
-matplotlib.use("Agg")
-
 import argparse
 import logging
 from systemd.journal import JournaldLogHandler
