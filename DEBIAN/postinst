@@ -1,4 +1,4 @@
-pip3 install bluesky zmq systemd matplotlib
+pip3 install zmq systemd
 # reload
 systemctl daemon-reload
 # enable the service
