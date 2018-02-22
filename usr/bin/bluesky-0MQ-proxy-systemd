@@ -3,10 +3,24 @@
 # with systemd as a service
 import argparse
 import logging
-from systemd.journal import JournaldLogHandler
-log = logging.getLogger('bluesky 0mq')
-log.addHandler(JournaldLogHandler())
-log.setLevel(logging.INFO)
+
+# try to import from different versions of logging API from python3-systemd
+# else just give up
+try:
+    from systemd.journal import JournaldLogHandler
+    log = logging.getLogger('bluesky 0mq')
+    log.addHandler(JournaldLogHandler())
+    log.setLevel(logging.INFO)
+except ImportError:
+    try:
+        from systemd.journal import JournalHandler
+        log = logging.getLogger('bluesky 0mq')
+        log.addHandler(JournalHandler())
+        log.setLevel(logging.INFO)
+    except ImportError:
+        # ignore logging if this fails too
+        log = None
+
 
 ############## This piece is a copy from bluesky.callbacks.zmq
 ############## (Thanks to Daniel B. Allan)
@@ -130,11 +144,14 @@ if __name__ == "__main__":
     in_port = args.in_port[0]
     out_port = args.out_port[0]
 
-    log.info("Loading...")
-    log.info("Connecting...")
+    if log is not None:
+        log.info("Loading...")
+        log.info("Connecting...")
     proxy = Proxy(in_port, out_port)
-    log.info("Receiving on port %d; publishing to port %d." % (in_port, out_port))
+    if log is not None:
+        log.info("Receiving on port %d; publishing to port %d." % (in_port, out_port))
     try:
         proxy.start()
     except KeyboardInterrupt:
-        log.info("Interrupted. Exiting...")
+        if log is not None:
+            log.info("Interrupted. Exiting...")
